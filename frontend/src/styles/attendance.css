@@ -1,0 +1,68 @@
+/* ===== Attendance — cards only with clickable status pill (toggle) ===== */
+
+.attendance-page .h2 { margin-bottom: 8px; }
+.header-row {
+  display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 8px;
+}
+.kpis { display: flex; gap: 8px; }
+.badge.kpi { background: #f6f7fb; border: 1px solid #e6e6ee; color: #344054; padding: 6px 10px; border-radius: 999px; font-size: 12px; }
+
+.actions-row { display: flex; gap: 10px; align-items: center; }
+.density { display: inline-flex; gap: 8px; align-items: center; font-size: 12px; color: #667085; }
+
+/* Filters toolbar */
+.card .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.card .toolbar > div { min-width: 180px; }
+
+/* Cards */
+.cards-wrap { padding: 16px; }
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.att-card {
+  border: 1px solid #e6e6ee; border-radius: 16px; background: #fff; padding: 14px;
+  box-shadow: 0 4px 14px rgba(16,24,40,.05);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.att-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(16,24,40,.08); }
+.card-top { display: flex; align-items: center; justify-content: space-between; }
+.avatar {
+  width: 56px; height: 56px; border-radius: 12px; display: grid; place-items: center;
+  font-weight: 700; font-size: 18px; outline: 6px solid transparent;
+}
+.id-badge { font-size: 12px; color: #667085; }
+.name { margin: 10px 0 6px; font-size: 16px; line-height: 1.25; }
+
+.meta { display: grid; gap: 4px; color: #475569; font-size: 13px; margin-bottom: 8px; }
+.meta .label { color: #94a3b8; font-size: 12px; padding-right: 6px; }
+
+/* Clickable status pill = button */
+.status-btn {
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  border: 1px solid #e6e6ee;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .06s ease, background-color .12s ease;
+}
+.status-btn:active { transform: translateY(1px); }
+
+.status-btn.present { background: #22c55e; border-color: #16a34a; color: #fff; }
+.status-btn.present:hover { box-shadow: 0 0 0 4px rgba(34,197,94,.15); }
+
+.status-btn.absent  { background: #ef4444; border-color: #dc2626; color: #fff; }
+.status-btn.absent:hover { box-shadow: 0 0 0 4px rgba(239,68,68,.15); }
+
+/* Compact cards */
+.cards-wrap.dense .att-card { padding: 10px; border-radius: 12px; }
+.cards-wrap.dense .avatar { width: 48px; height: 48px; font-size: 16px; }
+
+/* Add Student modal (lite) */
+.sheet-backdrop-lite {
+  position: fixed; inset: 0; background: rgba(16,24,40,.35);
+  display: grid; place-items: center; padding: 16px; z-index: 50;
+}
+.sheet-panel-lite { width: min(760px, 100%); }

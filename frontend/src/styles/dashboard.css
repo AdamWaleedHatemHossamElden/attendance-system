@@ -1,0 +1,53 @@
+/* header */
+.dash-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 6px;
+}
+.chip {
+  background:#fff; border:1px solid var(--border); padding:6px 10px; border-radius:999px; font-size:12px;
+}
+
+/* KPIs */
+.kpis {
+  display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+  gap:12px;
+}
+.kpi {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  display:flex; gap:12px; align-items:center;
+}
+.kpi__icon {
+  width:36px; height:36px; border-radius:10px; display:grid; place-items:center;
+  color:#2563eb; background:#eef2ff; border:1px solid #e7e9ff;
+}
+.kpi__label { color: var(--muted); font-size:12px; }
+.kpi__value { font-size:28px; font-weight:800; line-height:1.1; }
+.kpi__hint  { color: var(--muted); font-size:12px; }
+
+/* Charts grid */
+.charts-row {
+  display:grid;
+  gap:12px;
+  margin-top:8px;
+}
+
+/* Force two columns (side-by-side) on medium+ screens, stack on small */
+.charts-two {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 880px) {
+  .charts-two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.chart-card__head {
+  display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-bottom:8px;
+}
+.chart-card__title { font-weight:700; font-size:16px; }
+.chart-card__sub { color:var(--muted); font-size:12px; }
+.chart-card__body { min-height: 320px; }

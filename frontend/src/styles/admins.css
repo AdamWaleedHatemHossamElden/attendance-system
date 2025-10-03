@@ -1,0 +1,64 @@
+/* Grid: make panels equal height on wide screens, stack on small */
+.admins-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+  align-items: stretch;          /* stretch heights */
+}
+@media (min-width: 980px) {
+  .admins-grid { grid-template-columns: 1fr 1.2fr; }
+}
+
+/* Soft outer shell — slightly lighter for a subtle halo (like login) */
+.panel {
+  display: grid;                 /* so frame can stretch */
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  border-radius: 16px;
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.10),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 12px;
+}
+.panel__frame {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e6e6ee;
+  border-radius: 12px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, .07);
+  padding: 36px 16px 16px;       /* more top padding for badge space */
+  min-height: 100%;              /* stretch to match neighbor */
+}
+
+/* Floating badge (bigger + higher, like login) */
+.panel__badge {
+  position: absolute;
+  top: -28px;                    /* lift a bit more */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 62px; height: 62px;     /* 60–64 sweet spot */
+  border-radius: 16px;
+  display: grid; place-items: center;
+  color: #64748b;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  border: 1px solid #dfe3ea;
+  box-shadow:
+    0 10px 22px rgba(2, 6, 23, .14),
+    0 2px 0 rgba(255,255,255,.8) inset;
+}
+
+/* Titles & form spacing */
+.panel__title { font-size: 18px; font-weight: 800; margin: 8px 0 14px; }
+.admins-form { display: grid; gap: 12px; max-width: 520px; }
+
+/* Table wrapper to allow rounded header & subtle divider */
+.table-wrap {
+  overflow: hidden;              /* so header rounding is visible */
+  border-radius: 10px;
+}
+.table thead {
+  background: #eef2ff;
+  box-shadow: inset 0 -1px 0 #e6e6ee;  /* subtle divider under header */
+}
+.table thead tr th:first-child { border-top-left-radius: 10px; }
+.table thead tr th:last-child  { border-top-right-radius: 10px; }

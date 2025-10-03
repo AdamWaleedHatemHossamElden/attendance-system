@@ -1,0 +1,106 @@
+/* Sidebar look & feel (light variant) */
+:root {
+  --sb-bg: var(--bg-card);
+  --sb-border: var(--border);
+  --sb-text: var(--text);
+  --sb-muted: var(--muted);
+  --sb-ring: var(--ring);
+  --sb-shadow: var(--shadow);
+  --sb-active-bg: #eef2ff;          /* pill */
+  --sb-active-text: #111213;
+  --sb-hover-bg: #f7f7fb;
+}
+
+.s-aside {
+  background: var(--sb-bg);
+  border: 1px solid var(--sb-border);
+  border-radius: 16px;
+  box-shadow: var(--sb-shadow);
+  padding: 16px 12px;
+  position: sticky;
+  top: 12px;
+  align-self: start;
+  height: calc(100vh - 24px);
+  overflow-y: auto;
+  width: 240px; /* feel free to tweak to 260px */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.s-brand {
+  font-weight: 800;
+  letter-spacing: .2px;
+  padding: 4px 8px;
+}
+
+.s-section {
+  color: var(--sb-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  margin: 8px 8px 4px;
+  text-transform: uppercase;
+}
+
+.s-nav {
+  display: grid;
+  gap: 6px;
+}
+
+/* nav item with icon */
+.s-navlink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #475467;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+.s-navlink:hover { background: var(--sb-hover-bg); }
+.s-navlink.active {
+  background: var(--sb-active-bg);
+  color: var(--sb-active-text);
+  border-color: #e7e9ff;
+  box-shadow: 0 0 0 3px var(--sb-ring);
+}
+.s-ico {
+  width: 18px; height: 18px; flex: 0 0 18px;
+  stroke: currentColor; stroke-width: 1.8; fill: none;
+  opacity: .9;
+}
+
+/* account box */
+.s-account {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--sb-border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--sb-shadow);
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+.s-account__name { font-weight: 600; line-height: 1.2; }
+.s-account__role { color: var(--sb-muted); margin-top: -2px; }
+
+.s-logout {
+  justify-self: start;
+  background:#fff;
+  border:1px solid var(--sb-border);
+  padding:6px 10px;
+  border-radius:8px;
+  font-size:13px;
+  cursor:pointer;
+}
+.s-logout:hover { background:#f7f7fb; }
+
+/* make main area breathe a bit when sidebar present */
+@media (min-width: 900px) {
+  .with-sidebar {
+    grid-template-columns: 260px 1fr; /* aligns with width tweak if you change it */
+  }
+}
