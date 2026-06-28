@@ -1,5 +1,6 @@
 // src/middleware/auth.js
 import jwt from 'jsonwebtoken';
+import { config } from '../config.js';
 
 export function verifyToken(req, res, next) {
   try {
@@ -12,7 +13,7 @@ export function verifyToken(req, res, next) {
     const token = hdr.startsWith('Bearer ') ? hdr.slice(7) : hdr;
     if (!token) return res.status(401).json({ error: 'Missing token' });
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, config.jwt.secret);
     req.user = payload;
     next();
   } catch (e) {

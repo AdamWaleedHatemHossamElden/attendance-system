@@ -1,9 +1,9 @@
 // src/app.js
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
 import { pool } from './db.js';
+import { config } from './config.js';
 
 // Routers
 import { router as authRouter } from './routes/auth.js';
@@ -15,8 +15,6 @@ import { router as adminsRouter } from './routes/admins.js'; // NEW
 
 // Auth middleware
 import { verifyToken as requireAuth, requireAdmin } from './middleware/auth.js';
-
-dotenv.config();
 
 const app = express();
 
@@ -83,7 +81,7 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ error: err.message || 'Server error' });
 });
 
-const PORT = process.env.PORT || 4000;
+const PORT = config.app.port;
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);
 });

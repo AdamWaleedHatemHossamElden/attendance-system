@@ -2,16 +2,13 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import { pool } from '../db.js';
+import { config } from '../config.js';
 import { requireAuth } from '../middleware/auth.js';
-
-dotenv.config();
 
 export const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme-secret';
-const TOKEN_TTL = '7d';
+const TOKEN_TTL = config.jwt.tokenTtl;
 
 function normEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -44,7 +41,7 @@ router.post('/login', async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
 
     const user = { id: u.id, name: u.name, email: u.email, role: u.role };
-    const token = jwt.sign(user, JWT_SECRET, { expiresIn: TOKEN_TTL });
+    const token = jwt.sign(user, config.jwt.secret, { expiresIn: TOKEN_TTL });
 
     res.json({ token, user });
   } catch (e) {
@@ -55,10 +52,28 @@ router.post('/login', async (req, res) => {
 /* ================================= ME =================================
 GET /api/auth/me
 Headers: Authorization: Bearer <token>
-Returns: { id, name, email, role }
+Returns: { user: { id, name, email, role } }
 ====================================================================== */
 router.get('/me', requireAuth, async (req, res) => {
-  res.json(req.user);
+  try {
+    const userId = Number(req.user?.id);
+    if (!Number.isInteger(userId) || userId < 1) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const [rows] = await pool.query(
+      `SELECT id, name, email, role FROM users WHERE id = ? LIMIT 1`,
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    res.json({ user: rows[0] });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export default router;
