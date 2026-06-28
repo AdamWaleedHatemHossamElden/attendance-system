@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon src/app.js",
-    "start": "node src/app.js"
+    "start": "node src/app.js",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed-admin": "node scripts/seedAdmin.js"
   },
   "keywords": [],
   "author": "",
