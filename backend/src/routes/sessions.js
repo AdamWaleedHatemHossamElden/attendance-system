@@ -1,15 +1,17 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/auth.js';
+import { sendInternalError } from '../utils/errors.js';
+import { optionalTrimmedString, optionalDateOnly, parsePositiveInt, requireTrimmedString } from '../utils/validation.js';
 
 export const router = Router();
 
 /* ============================== LIST =============================== */
 // GET /api/sessions  (readable by any authenticated user)
 // Adds present_count and absent_count per session.
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const { title = '' } = req.query;
+    const title = optionalTrimmedString(req.query.title) || '';
 
     const sql = `
       SELECT
@@ -27,7 +29,7 @@ router.get('/', requireAuth, async (req, res) => {
     const [rows] = await pool.query(sql, [title, title]);
     res.json(rows);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to list sessions');
   }
 });
 
@@ -35,10 +37,13 @@ router.get('/', requireAuth, async (req, res) => {
 // POST /api/sessions  (admin only)
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { title, session_date } = req.body;
-    if (!title || !session_date) {
+    const titleResult = requireTrimmedString(req.body?.title, 'Title');
+    const dateResult = optionalDateOnly(req.body?.session_date, 'session_date');
+    if (titleResult.error || dateResult.error || !dateResult.value) {
       return res.status(400).json({ error: 'Title and session_date are required' });
     }
+    const title = titleResult.value;
+    const session_date = dateResult.value;
     const [r] = await pool.query(
       `INSERT INTO sessions (title, session_date) VALUES (?, ?)`,
       [title, session_date]
@@ -46,40 +51,51 @@ router.post('/', requireAdmin, async (req, res) => {
     // return shape compatible with list view (counts default to 0 for a new session)
     res.status(201).json({ id: r.insertId, title, session_date, present_count: 0, absent_count: 0 });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to create session');
   }
 });
 
 /* =============================== UPDATE ============================ */
 // PUT /api/sessions/:id  (admin only)
 router.put('/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
+  const idResult = parsePositiveInt(req.params.id, 'id');
+  if (idResult.error) return res.status(400).json({ error: idResult.error });
+  const id = idResult.value;
   try {
-    const { title, session_date } = req.body;
-    if (!title || !session_date) {
+    const titleResult = requireTrimmedString(req.body?.title, 'Title');
+    const dateResult = optionalDateOnly(req.body?.session_date, 'session_date');
+    if (titleResult.error || dateResult.error || !dateResult.value) {
       return res.status(400).json({ error: 'Title and session_date are required' });
     }
-    await pool.query(
+    const title = titleResult.value;
+    const session_date = dateResult.value;
+    const [result] = await pool.query(
       `UPDATE sessions SET title = ?, session_date = ? WHERE id = ?`,
       [title, session_date, id]
     );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to update session');
   }
 });
 
 /* =============================== DELETE ============================ */
 // DELETE /api/sessions/:id  (admin only)
 router.delete('/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
+  const idResult = parsePositiveInt(req.params.id, 'id');
+  if (idResult.error) return res.status(400).json({ error: idResult.error });
+  const id = idResult.value;
   try {
-    // Clean related attendance rows, then the session
-    await pool.query(`DELETE FROM attendance WHERE session_id = ?`, [id]);
-    await pool.query(`DELETE FROM sessions WHERE id = ?`, [id]);
+    const [result] = await pool.query(`DELETE FROM sessions WHERE id = ?`, [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to delete session');
   }
 });
 

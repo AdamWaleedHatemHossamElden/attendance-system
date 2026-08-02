@@ -62,7 +62,8 @@ app.get('/api/health', async (_req, res) => {
     const [rows] = await pool.query('SELECT 1 + 1 AS result');
     res.json({ status: 'ok', db: rows[0].result });
   } catch (err) {
-    res.status(500).json({ status: 'error', error: err.message });
+    console.error('Health check failed');
+    res.status(500).json({ status: 'error', error: 'Internal server error' });
   }
 });
 
@@ -77,8 +78,8 @@ app.use((req, res) => {
  * Global error handler
  */
 app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(err.status || 500).json({ error: err.message || 'Server error' });
+  console.error('Unhandled request error');
+  res.status(err.status || 500).json({ error: err.status ? 'Request failed' : 'Internal server error' });
 });
 
 const PORT = config.app.port;

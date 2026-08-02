@@ -3,6 +3,8 @@ import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import { pool } from '../db.js';
 import { requireAdmin } from '../middleware/auth.js';
+import { isDuplicateEntry, sendInternalError } from '../utils/errors.js';
+import { normalizeEmail, parsePositiveInt, requireTrimmedString } from '../utils/validation.js';
 
 export const router = Router();
 
@@ -20,7 +22,7 @@ router.get('/', requireAdmin, async (_req, res) => {
     );
     res.json(rows);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to list admins');
   }
 });
 
@@ -30,11 +32,17 @@ router.get('/', requireAdmin, async (_req, res) => {
  */
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    let { name, email, password } = req.body || {};
-    if (!name || !email || !password) {
+    const nameResult = requireTrimmedString(req.body?.name, 'name');
+    const emailResult = normalizeEmail(req.body?.email);
+
+    if (nameResult.error || typeof req.body?.password !== 'string' || !req.body.password.trim()) {
       return res.status(400).json({ error: 'name, email and password are required' });
     }
-    email = String(email).toLowerCase().trim();
+    if (emailResult.error) return res.status(400).json({ error: emailResult.error });
+
+    const name = nameResult.value;
+    const email = emailResult.value;
+    const password = req.body.password;
 
     // Enforce unique email
     const [exists] = await pool.query(`SELECT id FROM users WHERE email = ?`, [email]);
@@ -51,10 +59,10 @@ router.post('/', requireAdmin, async (req, res) => {
 
     res.status(201).json({ id: r.insertId, name, email, role: 'admin' });
   } catch (e) {
-    if (e?.code === 'ER_DUP_ENTRY') {
+    if (isDuplicateEntry(e)) {
       return res.status(409).json({ error: 'Email already exists' });
     }
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to create admin');
   }
 });
 
@@ -64,8 +72,9 @@ router.post('/', requireAdmin, async (req, res) => {
  */
 router.delete('/:id', requireAdmin, async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+    const idResult = parsePositiveInt(req.params.id, 'id');
+    if (idResult.error) return res.status(400).json({ error: idResult.error });
+    const id = idResult.value;
 
     // Can't delete yourself
     if (req.user?.id === id) {
@@ -88,7 +97,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
     await pool.query(`DELETE FROM users WHERE id = ?`, [id]);
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to delete admin');
   }
 });
 

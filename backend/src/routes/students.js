@@ -2,7 +2,17 @@ import { Router } from 'express';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import { pool } from '../db.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js'; // NEW
+import { requireAdmin } from '../middleware/auth.js';
+import { isDuplicateEntry, sendInternalError } from '../utils/errors.js';
+import {
+  optionalDateOnly,
+  optionalEnum,
+  optionalTrimmedString,
+  parseOptionalPositiveInt,
+  parsePagination,
+  parsePositiveInt,
+  requireTrimmedString,
+} from '../utils/validation.js';
 
 export const router = Router();
 
@@ -12,28 +22,90 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-function toDateOnly(v) {
-  if (!v) return null;
-  const s = String(v).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  try {
-    return new Date(s).toISOString().slice(0, 10);
-  } catch {
-    return null;
-  }
+function formatDateParts(year, month, day) {
+  return [
+    String(year).padStart(4, '0'),
+    String(month).padStart(2, '0'),
+    String(day).padStart(2, '0'),
+  ].join('-');
 }
 
-function toIntOrNull(v) {
-  if (v === null || v === undefined || v === '') return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+function normalizeImportBirthdate(value) {
+  if (value === undefined || value === null || value === '') return { value: null };
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return { value: null };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return { error: 'invalid birthdate' };
+    const dateResult = optionalDateOnly(trimmed, 'birthdate');
+    if (dateResult.error) return { error: 'invalid birthdate' };
+    return { value: dateResult.value };
+  }
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return { error: 'invalid birthdate' };
+    const normalized = formatDateParts(
+      value.getFullYear(),
+      value.getMonth() + 1,
+      value.getDate()
+    );
+    const dateResult = optionalDateOnly(normalized, 'birthdate');
+    if (dateResult.error) return { error: 'invalid birthdate' };
+    return { value: dateResult.value };
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const parsed = xlsx.SSF.parse_date_code(value);
+    if (!parsed) return { error: 'invalid birthdate' };
+    const normalized = formatDateParts(parsed.y, parsed.m, parsed.d);
+    const dateResult = optionalDateOnly(normalized, 'birthdate');
+    if (dateResult.error) return { error: 'invalid birthdate' };
+    return { value: dateResult.value };
+  }
+
+  return { error: 'invalid birthdate' };
+}
+
+function readStudentPayload(body) {
+  const name = requireTrimmedString(body?.name, 'Name');
+  const phone = requireTrimmedString(body?.phone, 'Phone');
+  if (name.error || phone.error) {
+    return { error: 'Name and phone are required' };
+  }
+
+  const birthdate = optionalDateOnly(body?.birthdate, 'birthdate');
+  if (birthdate.error) return { error: birthdate.error };
+
+  const gender = optionalEnum(body?.gender, ['Male', 'Female'], 'gender');
+  if (gender.error) return { error: gender.error };
+
+  const graduationYear = parseOptionalPositiveInt(body?.graduation_year, 'graduation_year');
+  if (graduationYear.error) return { error: graduationYear.error };
+  if (graduationYear.value !== null && graduationYear.value > 65535) {
+    return { error: 'graduation_year must be less than or equal to 65535' };
+  }
+
+  return {
+    value: {
+      name: name.value,
+      father_name: optionalTrimmedString(body?.father_name),
+      last_name: optionalTrimmedString(body?.last_name),
+      address: optionalTrimmedString(body?.address),
+      phone: phone.value,
+      birthdate: birthdate.value,
+      gender: gender.value,
+      source: optionalTrimmedString(body?.source),
+      graduation_year: graduationYear.value,
+      notes: optionalTrimmedString(body?.notes),
+    },
+  };
 }
 
 /* ===================================================================
    LIST + SEARCH + FILTERS + SORT + PAGINATION (with attendance counts)
    GET /api/students
    =================================================================== */
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const {
       name = '',
@@ -45,10 +117,19 @@ router.get('/', requireAuth, async (req, res) => {
       per_page = '10',
     } = req.query;
 
-    const pg = Math.max(1, parseInt(page, 10) || 1);
-    const perPageRaw = Math.max(1, parseInt(per_page, 10) || 10);
-    const perPage = Math.min(perPageRaw, 100);
-    const offset = (pg - 1) * perPage;
+    const paging = parsePagination(req.query, { defaultPage: 1, defaultPerPage: 10, maxPerPage: 100 });
+    if (paging.error) return res.status(400).json({ error: paging.error });
+
+    const safeName = optionalTrimmedString(name) || '';
+    const safePhone = optionalTrimmedString(phone) || '';
+    const safeGender = optionalTrimmedString(gender) || '';
+    if (safeGender && !['Male', 'Female'].includes(safeGender)) {
+      return res.status(400).json({ error: 'gender must be one of: Male, Female' });
+    }
+    const safeGraduationYear = optionalTrimmedString(graduation_year) || '';
+    if (safeGraduationYear && parseOptionalPositiveInt(safeGraduationYear, 'graduation_year').error) {
+      return res.status(400).json({ error: 'graduation_year must be a positive integer' });
+    }
 
     let orderClause = 's.name ASC';
     if (sort === 'name_desc') orderClause = 's.name DESC';
@@ -66,10 +147,10 @@ router.get('/', requireAuth, async (req, res) => {
         AND (? = '' OR s.graduation_year = ?)
     `;
     const countParams = [
-      name, name, name, name,
-      phone, phone,
-      gender, gender,
-      graduation_year, graduation_year,
+      safeName, safeName, safeName, safeName,
+      safePhone, safePhone,
+      safeGender, safeGender,
+      safeGraduationYear, safeGraduationYear,
     ];
     const [[{ total }]] = await pool.query(countSql, countParams);
 
@@ -103,23 +184,23 @@ router.get('/', requireAuth, async (req, res) => {
       LIMIT ? OFFSET ?
     `;
     const rowsParams = [
-      name, name, name, name,
-      phone, phone,
-      gender, gender,
-      graduation_year, graduation_year,
-      perPage, offset,
+      safeName, safeName, safeName, safeName,
+      safePhone, safePhone,
+      safeGender, safeGender,
+      safeGraduationYear, safeGraduationYear,
+      paging.perPage, paging.offset,
     ];
     const [rows] = await pool.query(rowsSql, rowsParams);
 
     res.json({
-      page: pg,
-      per_page: perPage,
+      page: paging.page,
+      per_page: paging.perPage,
       total,
-      total_pages: Math.max(1, Math.ceil(total / perPage)),
+      total_pages: Math.max(1, Math.ceil(total / paging.perPage)),
       rows,
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to list students');
   }
 });
 
@@ -154,7 +235,7 @@ router.get('/export', requireAdmin, async (_req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buf);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to export students');
   }
 });
 
@@ -196,7 +277,7 @@ router.get('/template', requireAdmin, async (_req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buf);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to build student import template');
   }
 });
 
@@ -221,13 +302,18 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
       const last_name = (r.LastName ?? r.last_name ?? '').toString().trim() || null;
       const address = (r.Address ?? r.address ?? '').toString().trim() || null;
       const phone = (r.Phone ?? r.phone ?? '').toString().trim();
-      const birthdate = toDateOnly((r.Birthdate ?? r.birthdate ?? '').toString().trim() || null);
+      const birthdateResult = normalizeImportBirthdate(r.Birthdate ?? r.birthdate ?? null);
       const gender = (r.Gender ?? r.gender ?? '').toString().trim() || null;
       const source = (r.Source ?? r.source ?? '').toString().trim() || null;
-      const gy = toIntOrNull((r.GraduationYear ?? r.graduation_year ?? r.graduationYear ?? '').toString().trim());
+      const gyResult = parseOptionalPositiveInt((r.GraduationYear ?? r.graduation_year ?? r.graduationYear ?? '').toString().trim(), 'graduation_year');
       const notes = (r.Notes ?? r.notes ?? '').toString().trim() || null;
 
       if (!name || !phone) { skipped++; errors.push(`Row ${i + 2}: missing name or phone`); continue; }
+      if (birthdateResult.error) { skipped++; errors.push(`Row ${i + 2}: invalid birthdate`); continue; }
+      if (gender && !['Male', 'Female'].includes(gender)) { skipped++; errors.push(`Row ${i + 2}: invalid gender`); continue; }
+      if (gyResult.error || (gyResult.value !== null && gyResult.value > 65535)) {
+        skipped++; errors.push(`Row ${i + 2}: invalid graduation year`); continue;
+      }
 
       try {
         const [result] = await pool.query(
@@ -244,91 +330,67 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
              source=VALUES(source),
              graduation_year=VALUES(graduation_year),
              notes=VALUES(notes)`,
-          [name, father_name, last_name, address, phone, birthdate, gender, source, gy, notes]
+          [name, father_name, last_name, address, phone, birthdateResult.value, gender, source, gyResult.value, notes]
         );
         if (result.affectedRows === 1) inserted++;
         else if (result.affectedRows === 2) updated++;
       } catch (e) {
         skipped++;
-        errors.push(`Row ${i + 2}: ${e.code || e.message}`);
+        errors.push(`Row ${i + 2}: could not import student`);
       }
     }
 
     res.json({ inserted, updated, skipped, errors });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to import students');
   }
 });
 
 /* =============================== CREATE ============================== */
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const {
-      name,
-      father_name = null,
-      last_name = null,
-      address = null,
-      phone,
-      birthdate = null,
-      gender = null,
-      source = null,
-      graduation_year = null,
-      notes = null,
-    } = req.body;
-
-    if (!name || !phone) {
-      return res.status(400).json({ error: 'Name and phone are required' });
-    }
+    const payload = readStudentPayload(req.body);
+    if (payload.error) return res.status(400).json({ error: payload.error });
+    const student = payload.value;
 
     const [r] = await pool.query(
       `INSERT INTO students
         (name, father_name, last_name, address, phone, birthdate, gender, source, graduation_year, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        name,
-        father_name || null,
-        last_name || null,
-        address || null,
-        phone,
-        toDateOnly(birthdate),
-        gender || null,
-        source || null,
-        toIntOrNull(graduation_year),
-        notes || null,
+        student.name,
+        student.father_name,
+        student.last_name,
+        student.address,
+        student.phone,
+        student.birthdate,
+        student.gender,
+        student.source,
+        student.graduation_year,
+        student.notes,
       ]
     );
 
     res.status(201).json({ id: r.insertId });
   } catch (e) {
-    if (e.code === 'ER_DUP_ENTRY') {
+    if (isDuplicateEntry(e)) {
       return res.status(409).json({ error: 'Duplicate (phone) detected' });
     }
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to create student');
   }
 });
 
 /* =============================== UPDATE ============================== */
 router.put('/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
+  const idResult = parsePositiveInt(req.params.id, 'id');
+  if (idResult.error) return res.status(400).json({ error: idResult.error });
+  const id = idResult.value;
   try {
-    const {
-      name,
-      father_name = null,
-      last_name = null,
-      address = null,
-      phone,
-      birthdate = null,
-      gender = null,
-      source = null,
-      graduation_year = null,
-      notes = null,
-    } = req.body;
+    const payload = readStudentPayload(req.body);
+    if (payload.error) return res.status(400).json({ error: payload.error });
+    const student = payload.value;
 
-    if (!name || !phone) {
-      return res.status(400).json({ error: 'Name and phone are required' });
-    }
-
-    await pool.query(
+    const [result] = await pool.query(
       `UPDATE students
          SET name=?,
              father_name=?,
@@ -342,56 +404,70 @@ router.put('/:id', requireAdmin, async (req, res) => {
              notes=?
        WHERE id=?`,
       [
-        name,
-        father_name || null,
-        last_name || null,
-        address || null,
-        phone,
-        toDateOnly(birthdate),
-        gender || null,
-        source || null,
-        toIntOrNull(graduation_year),
-        notes || null,
+        student.name,
+        student.father_name,
+        student.last_name,
+        student.address,
+        student.phone,
+        student.birthdate,
+        student.gender,
+        student.source,
+        student.graduation_year,
+        student.notes,
         id,
       ]
     );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
 
     res.json({ ok: true });
   } catch (e) {
-    if (e.code === 'ER_DUP_ENTRY') {
+    if (isDuplicateEntry(e)) {
       return res.status(409).json({ error: 'Duplicate (phone) detected' });
     }
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to update student');
   }
 });
 
 /* =============================== DELETE ============================== */
 router.delete('/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
+  const idResult = parsePositiveInt(req.params.id, 'id');
+  if (idResult.error) return res.status(400).json({ error: idResult.error });
+  const id = idResult.value;
   try {
-    await pool.query('DELETE FROM attendance WHERE student_id = ?', [id]);
-    await pool.query('DELETE FROM students WHERE id = ?', [id]);
+    const [result] = await pool.query('DELETE FROM students WHERE id = ?', [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to delete student');
   }
 });
 
 /* ========================= UPDATE NOTES ONLY ========================= */
 router.put('/:id/notes', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { notes } = req.body;
+  const idResult = parsePositiveInt(req.params.id, 'id');
+  if (idResult.error) return res.status(400).json({ error: idResult.error });
+  const id = idResult.value;
+  const notes = optionalTrimmedString(req.body?.notes);
   try {
-    await pool.query('UPDATE students SET notes=? WHERE id=?', [notes || null, id]);
+    const [result] = await pool.query('UPDATE students SET notes=? WHERE id=?', [notes, id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to update student notes');
   }
 });
 
 /* ========================== GET ONE (keep last) ===================== */
-router.get('/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
+router.get('/:id', async (req, res) => {
+  const idResult = parsePositiveInt(req.params.id, 'id');
+  if (idResult.error) return res.status(400).json({ error: idResult.error });
+  const id = idResult.value;
   try {
     const [rows] = await pool.query(
       `
@@ -409,14 +485,19 @@ router.get('/:id', requireAuth, async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: 'Student not found' });
     res.json(rows[0]);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to load student');
   }
 });
 
 /* =================== SESSIONS FOR A STUDENT (keep last) ============= */
-router.get('/:id/sessions', requireAuth, async (req, res) => {
-  const { id } = req.params;
+router.get('/:id/sessions', async (req, res) => {
+  const idResult = parsePositiveInt(req.params.id, 'id');
+  if (idResult.error) return res.status(400).json({ error: idResult.error });
+  const id = idResult.value;
   try {
+    const [studentRows] = await pool.query('SELECT id FROM students WHERE id = ? LIMIT 1', [id]);
+    if (studentRows.length === 0) return res.status(404).json({ error: 'Student not found' });
+
     const [rows] = await pool.query(
       `
       SELECT
@@ -433,7 +514,7 @@ router.get('/:id/sessions', requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to load student sessions');
   }
 });
 

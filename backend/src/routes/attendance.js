@@ -1,26 +1,29 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
 import xlsx from 'xlsx';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/auth.js';
+import { sendInternalError } from '../utils/errors.js';
+import {
+  optionalTrimmedString,
+  parsePagination,
+  parsePositiveInt,
+  requireEnum,
+} from '../utils/validation.js';
 
 export const router = Router();
 
 /* ======================= LIST BY SESSION (paged) ==================== */
 // GET /api/attendance/session/:sessionId?page=&per_page=&name=&phone=
-router.get('/session/:sessionId', requireAuth, async (req, res) => {
+router.get('/session/:sessionId', async (req, res) => {
   try {
-    const { sessionId } = req.params;
-    const {
-      page = '1',
-      per_page = '10',
-      name = '',
-      phone = '',
-    } = req.query;
+    const sessionIdResult = parsePositiveInt(req.params.sessionId, 'sessionId');
+    if (sessionIdResult.error) return res.status(400).json({ error: sessionIdResult.error });
+    const paging = parsePagination(req.query, { defaultPage: 1, defaultPerPage: 10, maxPerPage: 100 });
+    if (paging.error) return res.status(400).json({ error: paging.error });
 
-    const pg = Math.max(1, parseInt(page, 10) || 1);
-    const perPageRaw = Math.max(1, parseInt(per_page, 10) || 10);
-    const perPage = Math.min(perPageRaw, 100);
-    const offset = (pg - 1) * perPage;
+    const sessionId = sessionIdResult.value;
+    const name = optionalTrimmedString(req.query.name) || '';
+    const phone = optionalTrimmedString(req.query.phone) || '';
 
     const [[{ total }]] = await pool.query(
       `
@@ -51,18 +54,18 @@ router.get('/session/:sessionId', requireAuth, async (req, res) => {
       ORDER BY s.name ASC, a.student_id ASC
       LIMIT ? OFFSET ?
       `,
-      [sessionId, name, name, phone, phone, perPage, offset]
+      [sessionId, name, name, phone, phone, paging.perPage, paging.offset]
     );
 
     res.json({
-      page: pg,
-      per_page: perPage,
+      page: paging.page,
+      per_page: paging.perPage,
       total,
-      total_pages: Math.max(1, Math.ceil(total / perPage)),
+      total_pages: Math.max(1, Math.ceil(total / paging.perPage)),
       rows,
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to list attendance');
   }
 });
 
@@ -70,7 +73,9 @@ router.get('/session/:sessionId', requireAuth, async (req, res) => {
 // POST /api/attendance/seed/:sessionId  (admin only)
 router.post('/seed/:sessionId', requireAdmin, async (req, res) => {
   try {
-    const { sessionId } = req.params;
+    const sessionIdResult = parsePositiveInt(req.params.sessionId, 'sessionId');
+    if (sessionIdResult.error) return res.status(400).json({ error: sessionIdResult.error });
+    const sessionId = sessionIdResult.value;
 
     // Insert Absent rows for any student not in this session yet (idempotent)
     await pool.query(
@@ -88,7 +93,7 @@ router.post('/seed/:sessionId', requireAdmin, async (req, res) => {
 
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to seed attendance');
   }
 });
 
@@ -97,10 +102,15 @@ router.post('/seed/:sessionId', requireAdmin, async (req, res) => {
 // Body: { session_id, student_id, status: 'Present'|'Absent' }
 router.post('/mark', requireAdmin, async (req, res) => {
   try {
-    const { session_id, student_id, status } = req.body;
-    if (!session_id || !student_id || !['Present', 'Absent'].includes(status)) {
+    const sessionIdResult = parsePositiveInt(req.body?.session_id, 'session_id');
+    const studentIdResult = parsePositiveInt(req.body?.student_id, 'student_id');
+    const statusResult = requireEnum(req.body?.status, ['Present', 'Absent'], 'status');
+    if (sessionIdResult.error || studentIdResult.error || statusResult.error) {
       return res.status(400).json({ error: 'session_id, student_id, and valid status are required' });
     }
+    const session_id = sessionIdResult.value;
+    const student_id = studentIdResult.value;
+    const status = statusResult.value;
 
     await pool.query(
       `
@@ -113,7 +123,7 @@ router.post('/mark', requireAdmin, async (req, res) => {
 
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to mark attendance');
   }
 });
 
@@ -121,7 +131,9 @@ router.post('/mark', requireAdmin, async (req, res) => {
 // GET /api/attendance/export/session/:sessionId  (admin only)
 router.get('/export/session/:sessionId', requireAdmin, async (req, res) => {
   try {
-    const { sessionId } = req.params;
+    const sessionIdResult = parsePositiveInt(req.params.sessionId, 'sessionId');
+    if (sessionIdResult.error) return res.status(400).json({ error: sessionIdResult.error });
+    const sessionId = sessionIdResult.value;
 
     const [rows] = await pool.query(
       `
@@ -151,7 +163,7 @@ router.get('/export/session/:sessionId', requireAdmin, async (req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buf);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendInternalError(res, 'Failed to export attendance');
   }
 });
 
