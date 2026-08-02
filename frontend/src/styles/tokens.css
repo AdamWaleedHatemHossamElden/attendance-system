@@ -1,0 +1,98 @@
+:root {
+  color-scheme: light;
+
+  --color-white: #ffffff;
+  --color-gray-25: #fcfcfd;
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #eef2f6;
+  --color-gray-200: #e3e8ef;
+  --color-gray-300: #cdd5df;
+  --color-gray-500: #667085;
+  --color-gray-700: #344054;
+  --color-gray-800: #202939;
+  --color-gray-900: #121926;
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-green-50: #ecfdf3;
+  --color-green-600: #16a34a;
+  --color-red-50: #fef2f2;
+  --color-red-600: #dc2626;
+  --color-amber-50: #fffbeb;
+  --color-amber-600: #d97706;
+
+  --app-bg: #f4f7fb;
+  --surface: var(--color-white);
+  --surface-subtle: var(--color-gray-50);
+  --surface-muted: var(--color-gray-100);
+  --text-primary: var(--color-gray-900);
+  --text-secondary: var(--color-gray-700);
+  --text-muted: var(--color-gray-500);
+  --border-subtle: var(--color-gray-200);
+  --border-strong: var(--color-gray-300);
+
+  --brand: var(--color-blue-600);
+  --brand-hover: var(--color-blue-700);
+  --brand-soft: var(--color-blue-50);
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.18);
+
+  --status-success: var(--color-green-600);
+  --status-success-bg: var(--color-green-50);
+  --status-danger: var(--color-red-600);
+  --status-danger-bg: var(--color-red-50);
+  --status-warning: var(--color-amber-600);
+  --status-warning-bg: var(--color-amber-50);
+  --status-info: var(--color-blue-600);
+  --status-info-bg: var(--color-blue-50);
+
+  --table-head-bg: #f1f5fb;
+  --table-row-hover: #f8fbff;
+  --form-bg: var(--color-white);
+  --form-border: var(--border-subtle);
+  --form-border-focus: var(--brand);
+
+  --shadow-xs: 0 1px 2px rgba(18, 25, 38, 0.05);
+  --shadow-sm: 0 2px 8px rgba(18, 25, 38, 0.07);
+  --shadow-md: 0 12px 28px rgba(18, 25, 38, 0.10);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+
+  --layout-sidebar-width: 264px;
+  --layout-topbar-height: 64px;
+
+  /* Legacy aliases used by the current JSX pages. */
+  --bg: var(--app-bg);
+  --bg-card: var(--surface);
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --border: var(--border-subtle);
+  --primary: var(--brand);
+  --primary-600: var(--brand-hover);
+  --success: var(--status-success);
+  --danger: var(--status-danger);
+  --warning: var(--status-warning);
+  --ring: rgba(37, 99, 235, 0.18);
+  --shadow: var(--shadow-sm);
+}
