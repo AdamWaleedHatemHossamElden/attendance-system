@@ -1,98 +1,182 @@
-/* Make login fill the whole viewport width & height */
-.auth-main { padding: 0 !important; }
+.auth-main {
+  padding: 0 !important;
+}
 
-/* Dark gradient background covers entire screen */
-.auth-wrap {
-  width: 100vw;
+.login-v2 {
   min-height: 100vh;
   display: grid;
-  place-items: center;
-  padding: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
+  align-items: center;
+  gap: clamp(32px, 6vw, 88px);
+  padding: clamp(24px, 5vw, 72px);
   background:
-    radial-gradient(1200px 600px at 20% -10%, #1e293b 0%, transparent 60%),
-    radial-gradient(1000px 800px at 100% 0%, #0f172a 0%, #0b1020 55%, #080d1a 100%);
-  color: #0f172a;
+    radial-gradient(circle at 12% 15%, rgba(37, 99, 235, .16), transparent 30%),
+    radial-gradient(circle at 84% 12%, rgba(22, 163, 74, .13), transparent 28%),
+    linear-gradient(135deg, #f8fafc 0%, #eef4fb 52%, #f7fbff 100%);
 }
 
-/* Outer card container with soft glow */
-.auth-card {
-  width: min(720px, 100%);
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.06);
-  box-shadow:
-    0 10px 40px rgba(0,0,0,.35),
-    inset 0 0 0 1px rgba(255,255,255,0.05);
-  backdrop-filter: blur(6px);
-  padding: 24px;
+.login-v2__brand {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 680px;
 }
 
-/* Inner white panel */
-.auth-card__frame {
-  background: #ffffff;
-  border: 1px solid #e6e6ee;
-  border-radius: 12px;
-  padding: 28px 28px 22px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+.login-v2__mark {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--brand);
+  color: var(--color-white);
+  font-size: 24px;
+  font-weight: 900;
+  box-shadow: 0 18px 42px rgba(37, 99, 235, .28);
 }
 
-/* Avatar */
-.auth-avatar {
-  width: 64px; height: 64px;
-  margin: -44px auto 10px;
-  border-radius: 14px;
-  display: grid; place-items: center;
-  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-  border: 1px solid #dfe3ea;
-  box-shadow: 0 6px 18px rgba(2,6,23,.08);
+.login-v2__brand h1 {
+  margin: 0;
+  max-width: 680px;
+  color: var(--text-primary);
+  font-size: clamp(38px, 5vw, 64px);
+  line-height: .96;
+  letter-spacing: 0;
 }
 
-/* Titles */
-.auth-title { text-align: center; font-weight: 800; font-size: 22px; margin-top: 6px; }
-.auth-sub   { text-align: center; color: #6b7280; margin: 4px 0 14px; font-size: 14px; }
+.login-v2__brand p {
+  margin: var(--space-4) 0 0;
+  max-width: 580px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-lg);
+}
 
-/* Form */
-.auth-form { display: grid; gap: 10px; margin-top: 6px; }
-.auth-label { font-size: 12px; color: #6b7280; letter-spacing: .02em; }
-.auth-input {
+.login-v2__features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.login-v2__features span {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .74);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 750;
+  box-shadow: var(--shadow-xs);
+}
+
+.login-v2__card {
   width: 100%;
-  background: #fff;
-  border: 1px solid #e6e6ee;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 14px;
-  outline: none;
-}
-.auth-input:focus { border-color: #a3bffa; box-shadow: 0 0 0 3px #eef2ff; }
-
-/* Alert */
-.auth-alert {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-  padding: 8px 10px;
-  border-radius: 8px;
-  margin-bottom: 6px;
-  font-size: 13px;
+  padding: clamp(24px, 4vw, 36px);
+  border-radius: 18px;
+  box-shadow: var(--shadow-md);
 }
 
-/* Primary button */
-.auth-btn {
-  margin-top: 8px;
-  width: 100%;
-  background: #22c55e;
-  color: #fff;
+.login-v2__card-head {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.login-v2__mini-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--brand-soft);
+  color: var(--brand);
+  border: 1px solid var(--color-blue-100);
+}
+
+.login-v2__mini-mark svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+}
+
+.login-v2__card h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.login-v2__card p {
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.login-v2__alert {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid rgba(220, 38, 38, .22);
+  border-radius: var(--radius-md);
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  border: 1px solid #16a34a;
-  padding: 12px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: transform .02s ease-in, filter .15s ease;
 }
-.auth-btn:hover { filter: brightness(1.03); }
-.auth-btn:active { transform: translateY(1px); }
-.auth-btn[disabled] { opacity: .6; cursor: not-allowed; }
 
-/* Footer */
-.auth-foot { margin-top: 14px; display: flex; justify-content: center; }
-.auth-brand { color: #6b7280; font-size: 12px; }
+.login-v2__form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.login-v2__field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.login-v2__field label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 750;
+}
+
+.login-v2__submit {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.login-v2__note {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .login-v2 {
+    grid-template-columns: 1fr;
+    align-content: center;
+  }
+
+  .login-v2__brand {
+    max-width: none;
+  }
+
+  .login-v2__brand h1 {
+    font-size: clamp(34px, 10vw, 48px);
+  }
+}
+
+@media (max-width: 520px) {
+  .login-v2 {
+    padding: var(--space-4);
+  }
+
+  .login-v2__features {
+    display: grid;
+  }
+}

@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
-
-// MOVED styles
+import { Badge, Button, Card, Input } from '../components/ui';
 import '../styles/login.css';
 
 export default function Login() {
@@ -30,55 +29,82 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-wrap">
-      <div className="auth-card">
-        <div className="auth-card__frame">
-          <div className="auth-avatar">
-            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
-              <circle cx="12" cy="8" r="4" fill="#e2e8f0"/>
-              <path d="M4 20a8 8 0 0 1 16 0" fill="#e2e8f0"/>
+    <main className="login-v2">
+      <section className="login-v2__brand" aria-label="Attendance System V2">
+        <div className="login-v2__mark" aria-hidden="true">AS</div>
+        <Badge>Attendance System V2</Badge>
+        <div>
+          <h1>Attendance that feels organized from the first click.</h1>
+          <p>
+            Sign in to manage students, sessions, reports, and attendance records
+            from one focused workspace.
+          </p>
+        </div>
+        <div className="login-v2__features" aria-label="System highlights">
+          <span>Fresh session validation</span>
+          <span>Admin controls</span>
+          <span>Student records</span>
+        </div>
+      </section>
+
+      <Card className="login-v2__card">
+        <div className="login-v2__card-head">
+          <div className="login-v2__mini-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M8 7h8M8 12h8M8 17h5" />
+              <rect x="4" y="3" width="16" height="18" rx="3" />
             </svg>
           </div>
-          <div className="auth-title">Admin Sign In</div>
-          <p className="auth-sub">Enter your login credentials</p>
+          <div>
+            <h2>Sign in</h2>
+            <p>Use your Attendance System account credentials.</p>
+          </div>
+        </div>
 
-          {err && <div className="auth-alert">{err}</div>}
+        {err ? (
+          <div className="login-v2__alert" role="alert">
+            {err}
+          </div>
+        ) : null}
 
-          <form onSubmit={onSubmit} className="auth-form">
-            <label className="auth-label" htmlFor="email">Email address</label>
-            <input
+        <form onSubmit={onSubmit} className="login-v2__form">
+          <div className="login-v2__field">
+            <label htmlFor="email">Email address</label>
+            <Input
               id="email"
-              className="auth-input"
               type="email"
               required
               value={email}
-              onChange={e=>setEmail(e.target.value)}
-              placeholder="admin@school.edu"
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
               autoComplete="username"
+              disabled={busy}
             />
+          </div>
 
-            <label className="auth-label" htmlFor="password">Password</label>
-            <input
+          <div className="login-v2__field">
+            <label htmlFor="password">Password</label>
+            <Input
               id="password"
-              className="auth-input"
               type="password"
               required
               value={password}
-              onChange={e=>setPassword(e.target.value)}
-              placeholder="••••••••"
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
               autoComplete="current-password"
+              disabled={busy}
             />
-
-            <button className="auth-btn" type="submit" disabled={busy}>
-              {busy ? 'Signing in…' : 'Sign In'}
-            </button>
-          </form>
-
-          <div className="auth-foot">
-            <span className="auth-brand">Attendance Dashboard</span>
           </div>
+
+          <Button className="login-v2__submit" type="submit" variant="primary" disabled={busy}>
+            {busy ? 'Signing in...' : 'Sign in'}
+          </Button>
+        </form>
+
+        <div className="login-v2__note">
+          Access is protected by your backend account and current role.
         </div>
-      </div>
-    </div>
+      </Card>
+    </main>
   );
 }
