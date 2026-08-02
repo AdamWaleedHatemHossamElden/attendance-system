@@ -9,9 +9,9 @@ import StudentProfile from './pages/StudentProfile.jsx'
 import Reports from './pages/Reports.jsx'        // NEW
 
 // Auth
-import { AuthProvider, useAuth } from './auth/AuthProvider.jsx'
-import ProtectedRoute from './auth/ProtectedRoute.jsx'
-import AdminRoute from './auth/AdminRoute.jsx'
+import { AuthProvider, useAuth } from './auth/AuthProvider'
+import ProtectedRoute from './auth/ProtectedRoute'
+import AdminRoute from './auth/AdminRoute'
 import Login from './pages/Login.jsx'
 
 // Admins page

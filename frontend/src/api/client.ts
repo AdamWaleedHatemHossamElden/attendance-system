@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { dispatchUnauthorized } from '../auth/events';
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
@@ -13,3 +14,11 @@ apiClient.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) dispatchUnauthorized();
+    return Promise.reject(error);
+  },
+);
